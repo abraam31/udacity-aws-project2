@@ -1,0 +1,278 @@
+Description: 
+    This is my first cloudformation file
+
+Parameters: 
+    EnvironmentName: 
+        Description: Naming convention to describe
+        Type: String
+
+    VpcCIDR:
+        Description: Subnet mask for the VPC 
+        Type: String
+        Default: 10.0.0.0/16
+
+    FirstPrivateSubnetMask: 
+        Description: Subnet Mask of first private subnet 
+        Type: String
+
+    SecondPrivateSubnetMask: 
+        Description: Subnet Mask of second private subnet 
+        Type: String
+
+    FirstPublicSubnetMask: 
+        Description: Subnet Mask of first public subnet 
+        Type: String
+
+    SecondPublicSubnetMask: 
+        Description: Subnet Mask of second public subnet 
+        Type: String
+
+
+Resources:
+    CloudFormationVPC:
+        Type: AWS::EC2::VPC
+        Properties:
+            CidrBlock: !Ref VpcCIDR
+            EnableDnsSupport: true
+            EnableDnsHostnames: true
+            Tags:
+                - Key: Name
+                  Value: !Ref EnvironmentName
+
+    myInternetGateway:
+        Type: AWS::EC2::InternetGateway
+        Properties:
+            Tags:
+            - Key: Name
+              Value: !Ref EnvironmentName
+              
+    InternetGatewayAttachment:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+            InternetGatewayId: !Ref myInternetGateway
+            VpcId: !Ref CloudFormationVPC
+    
+    FirstPrivateSubnet:
+        Type: AWS::EC2::Subnet
+        Properties: 
+                AvailabilityZone: !Select [ 0, !GetAZs '' ]
+                CidrBlock: !Ref FirstPrivateSubnetMask
+                MapPublicIpOnLaunch: false
+                Tags:
+                    - Key: Name
+                      Value: !Ref EnvironmentName
+                VpcId: !Ref CloudFormationVPC
+    SecondPrivateSubnet:
+        Type: AWS::EC2::Subnet
+        Properties: 
+                AvailabilityZone: !Select [ 1, !GetAZs '' ]
+                CidrBlock: !Ref SecondPrivateSubnetMask
+                MapPublicIpOnLaunch: false
+                Tags:
+                    - Key: Name
+                      Value: !Ref EnvironmentName
+                VpcId: !Ref CloudFormationVPC
+    FirstPublicSubnet:
+        Type: AWS::EC2::Subnet
+        Properties: 
+                AvailabilityZone: !Select [ 0, !GetAZs '' ]
+                CidrBlock: !Ref FirstPublicSubnetMask
+                MapPublicIpOnLaunch: false
+                Tags:
+                    - Key: Name
+                      Value: !Ref EnvironmentName
+                VpcId: !Ref CloudFormationVPC
+
+    SecondPublicSubnet:
+        Type: AWS::EC2::Subnet
+        Properties: 
+            AvailabilityZone: !Select [ 1, !GetAZs '' ]
+            CidrBlock: !Ref SecondPublicSubnetMask
+            MapPublicIpOnLaunch: false
+            Tags:
+                - Key: Name
+                  Value: "SecondPublicSubnet"
+            VpcId: !Ref CloudFormationVPC
+
+    NatGateway1EIP:
+        Type: AWS::EC2::EIP
+        DependsOn: InternetGatewayAttachment
+        Properties: 
+            Domain: vpc
+
+    NatGateway2EIP:
+        Type: AWS::EC2::EIP
+        DependsOn: InternetGatewayAttachment
+        Properties:
+            Domain: vpc
+
+    NatGateway1: 
+        Type: AWS::EC2::NatGateway
+        Properties: 
+            AllocationId: !GetAtt NatGateway1EIP.AllocationId
+            SubnetId: !Ref FirstPublicSubnet
+
+    NatGateway2: 
+        Type: AWS::EC2::NatGateway
+        Properties:
+            AllocationId: !GetAtt NatGateway2EIP.AllocationId
+            SubnetId: !Ref SecondPublicSubnet
+    PublicRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            VpcId: !Ref CloudFormationVPC
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${EnvironmentName} Public Routes
+
+    DefaultPublicRoute: 
+        Type: AWS::EC2::Route
+        DependsOn: InternetGatewayAttachment
+        Properties: 
+            RouteTableId: !Ref PublicRouteTable
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref myInternetGateway
+
+    PublicSubnet1RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref FirstPublicSubnet
+
+    PublicSubnet2RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref SecondPublicSubnet
+
+    PublicRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            VpcId: !Ref CloudFormationVPC
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${EnvironmentName} Public Routes
+
+    DefaultPublicRoute: 
+        Type: AWS::EC2::Route
+        DependsOn: InternetGatewayAttachment
+        Properties: 
+            RouteTableId: !Ref PublicRouteTable
+            DestinationCidrBlock: 0.0.0.0/0
+            GatewayId: !Ref myInternetGateway
+
+    PublicSubnet1RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref FirstPublicSubnet
+
+    PublicSubnet2RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PublicRouteTable
+            SubnetId: !Ref SecondPublicSubnet
+
+
+    PrivateRouteTable1:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            VpcId: !Ref CloudFormationVPC
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${EnvironmentName} Private Routes (AZ1)
+
+    DefaultPrivateRoute1:
+        Type: AWS::EC2::Route
+        Properties:
+            RouteTableId: !Ref PrivateRouteTable1
+            DestinationCidrBlock: 0.0.0.0/0
+            NatGatewayId: !Ref NatGateway1
+
+    PrivateSubnet1RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PrivateRouteTable1
+            SubnetId: !Ref FirstPrivateSubnet
+
+    PrivateRouteTable2:
+        Type: AWS::EC2::RouteTable
+        Properties: 
+            VpcId: !Ref CloudFormationVPC
+            Tags: 
+                - Key: Name 
+                  Value: !Sub ${EnvironmentName} Private Routes (AZ2)
+
+    DefaultPrivateRoute2:
+        Type: AWS::EC2::Route
+        Properties:
+            RouteTableId: !Ref PrivateRouteTable2
+            DestinationCidrBlock: 0.0.0.0/0
+            NatGatewayId: !Ref NatGateway2
+
+    PrivateSubnet2RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+            RouteTableId: !Ref PrivateRouteTable2
+            SubnetId: !Ref SecondPrivateSubnet
+
+Outputs:
+    VPC:
+        Description: taking the output of our created VPC 
+        Value: !Ref CloudFormationVPC
+        Export:
+            Name: !Sub ${EnvironmentName}-VPCID
+    
+    VPCPublicRouteTable:
+        Description: taking the output of our public route table
+        Value: !Ref PublicRouteTable
+        Export:
+            Name: !Sub ${EnvironmentName}-PUB-RT
+
+    VPCPrivateRouteTable1:
+        Description: taking the output of our first private route table
+        Value: !Ref PrivateRouteTable1
+        Export:
+            Name: !Sub ${EnvironmentName}-PRI-RT1
+
+    VPCPrivateRouteTable2:
+        Description: taking the output of our second private route table
+        Value: !Ref PrivateRouteTable2
+        Export:
+            Name: !Sub ${EnvironmentName}-PRI-RT2 
+
+    PublicSubnets:
+        Description: A list of the public subnets
+        Value: !Join [ ",", [ !Ref FirstPublicSubnet, !Ref SecondPublicSubnet ]]
+        Export:
+          Name: !Sub ${EnvironmentName}-PUB-NETS
+
+    PrivateSubnets:
+        Description: A list of the private subnets
+        Value: !Join [ ",", [ !Ref FirstPrivateSubnet, !Ref SecondPrivateSubnet ]]
+        Export:
+          Name: !Sub ${EnvironmentName}-PRI-NETS
+
+    PublicSubnet1:
+        Description: taking the output of our first public subnet
+        Value: !Ref FirstPublicSubnet
+        Export:
+            Name: !Sub ${EnvironmentName}-PUB1-SUB
+
+    PublicSubnet2:
+        Description: taking the output of our second public subnet
+        Value: !Ref SecondPublicSubnet
+        Export:
+            Name: !Sub ${EnvironmentName}-PUB2-SUB
+
+    PrivateSubnet1:
+        Description: taking the output of our first private subnet
+        Value: !Ref FirstPrivateSubnet
+        Export:
+            Name: !Sub ${EnvironmentName}-PRI1-SUB
+
+    PrivateSubnet2:
+        Description: taking the output of our second private subnet
+        Value: !Ref SecondPrivateSubnet
+        Export:
+            Name: !Sub ${EnvironmentName}-PRI2-SUB
