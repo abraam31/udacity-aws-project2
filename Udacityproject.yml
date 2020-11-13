@@ -7,13 +7,36 @@ Parameters:
         Type: String
 
 Resources:
-    SimpleProfile:
-        Type: AWS::IAM::InstanceProfile
-        Properties: 
-          InstanceProfileName: SimpleProfile
-          Path: "/"
-          Roles:
-            - udacity-p2
+
+    RootRole:
+      Type: 'AWS::IAM::Role'
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                - ec2.amazonaws.com
+              Action:
+                - 'sts:AssumeRole'
+        Path: /
+        Policies:
+          - PolicyName: root
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action: '*'
+                  Resource: '*'
+
+    RootInstanceProfile:
+      Type: 'AWS::IAM::InstanceProfile'
+      Properties:
+        Path: /
+        Roles:
+          - !Ref RootRole
+
 
     UdagramSG:
         Type: AWS::EC2::SecurityGroup
@@ -56,7 +79,7 @@ Resources:
             AssociatePublicIpAddress : true
             ImageId: ami-0dc8d444ee2a42d8a
             KeyName: please
-            IamInstanceProfile: SimpleProfile
+            IamInstanceProfile: !Ref RootInstanceProfile
             SecurityGroups:
             - Ref: UdagramSG
             InstanceType: t2.micro
