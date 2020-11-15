@@ -2,6 +2,22 @@
 	{ 
 		"ParameterKey": "EnvironmentName",
 		"ParameterValue": "AbraamProject"
+	},
+	{ 
+		"ParameterKey": "AmiID",
+		"ParameterValue": "ami-0dc8d444ee2a42d8a"
+	},
+	{ 
+		"ParameterKey": "LBSecurityGroupName",
+		"ParameterValue": "LoadbalancerUdagram-SecurityGroup"
+	},
+	{ 
+		"ParameterKey": "AppSecurityGroupName",
+		"ParameterValue": "Udagram-SecurityGroup"
+	},	
+	{ 
+		"ParameterKey": "WebServersInstanceType",
+		"ParameterValue": "t3.medium"
 	}
 ]
 		
