@@ -157,7 +157,7 @@ Resources:
             LaunchConfigurationName:
                 Ref: WebAppLaunchConfig
             MinSize: '4'
-            MaxSize: '4'
+            MaxSize: '6'
             DesiredCapacity: '4'
             HealthCheckType: ELB 
             HealthCheckGracePeriod: 60 
